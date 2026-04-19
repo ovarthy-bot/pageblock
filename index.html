@@ -177,10 +177,10 @@
     }
 
     /* Column widths */
-    .col-work { width: 39%; }
+    .col-work { width: 40%; }
     .col-type { width: 20%; }
-    .col-ref  { width: 30%; }
-    .col-ac   { width: 11%; }
+    .col-ref  { width: 33%; }
+    .col-ac   { width: 7%; }
 
     tbody tr.vrow {
       height: var(--row-h);
@@ -555,19 +555,17 @@ function closeAllPanels() {
 
 function populatePanel(col) {
   const vals   = [...new Set(allData.map(r => r[col] || '').filter(Boolean))].sort();
-  const cur    = colFilters[col];
   const list   = document.getElementById(`flist-${col}`);
   const search = document.getElementById(`fsearch-${col}`);
 
-  search.value = '';
-  search.oninput = () => renderList(search.value.trim().toLowerCase());
+  search.value = colFilters[col]; // mevcut filtre değerini göster
 
   function renderList(term) {
-    const visible = term ? vals.filter(v => v.toLowerCase().includes(term)) : vals;
+    const visible = term ? vals.filter(v => v.toLowerCase().includes(term.toLowerCase())) : vals;
     const MAX     = 200;
-    let html = `<div class="flt-item all${!cur ? ' sel' : ''}" data-v="">Tümü (filtre yok)</div>`;
+    let html = `<div class="flt-item all${!colFilters[col] ? ' sel' : ''}" data-v="">Tümü (filtre yok)</div>`;
     visible.slice(0, MAX).forEach(v => {
-      html += `<div class="flt-item${v === cur ? ' sel' : ''}" data-v="${esc(v)}" title="${esc(v)}">${esc(v)}</div>`;
+      html += `<div class="flt-item${v === colFilters[col] ? ' sel' : ''}" data-v="${esc(v)}" title="${esc(v)}">${esc(v)}</div>`;
     });
     if (visible.length > MAX)
       html += `<div class="flt-more">+${visible.length - MAX} daha — aramayı daraltın</div>`;
@@ -576,13 +574,28 @@ function populatePanel(col) {
     list.querySelectorAll('.flt-item').forEach(item => {
       item.addEventListener('click', () => {
         colFilters[col] = item.dataset.v;
+        search.value    = item.dataset.v;
         closeAllPanels();
         updateFilterHeads();
         applyFilter();
       });
     });
   }
-  renderList('');
+
+  // Yazılan metin hem listeyi hem tabloyu anında filtreler (kısmi eşleşme)
+  let typeTimer;
+  search.oninput = () => {
+    const term = search.value.trim();
+    renderList(term);
+    clearTimeout(typeTimer);
+    typeTimer = setTimeout(() => {
+      colFilters[col] = term;
+      updateFilterHeads();
+      applyFilter();
+    }, 250);
+  };
+
+  renderList(colFilters[col]);
 }
 
 function updateFilterHeads() {
@@ -595,10 +608,10 @@ function updateFilterHeads() {
 /* ─── Filter + Search ─── */
 function getBaseData() {
   let base = allData;
-  if (colFilters.work)      base = base.filter(r => r.work      === colFilters.work);
-  if (colFilters.acType)    base = base.filter(r => r.acType    === colFilters.acType);
-  if (colFilters.reference) base = base.filter(r => r.reference === colFilters.reference);
-  if (colFilters.ac)        base = base.filter(r => r.ac        === colFilters.ac);
+  if (colFilters.work)      base = base.filter(r => (r.work      || '').toLowerCase().includes(colFilters.work.toLowerCase()));
+  if (colFilters.acType)    base = base.filter(r => (r.acType    || '').toLowerCase().includes(colFilters.acType.toLowerCase()));
+  if (colFilters.reference) base = base.filter(r => (r.reference || '').toLowerCase().includes(colFilters.reference.toLowerCase()));
+  if (colFilters.ac)        base = base.filter(r => (r.ac        || '').toLowerCase().includes(colFilters.ac.toLowerCase()));
   return base;
 }
 
