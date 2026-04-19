@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PageBlock Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0f1a;
+      --surface: #111827;
+      --surface2: #1a2233;
+      --border: #1f2f47;
+      --text: #e2e8f0;
+      --text-muted: #64748b;
+      --blue: #3b82f6;
+      --blue-light: #93c5fd;
+      --purple: #a78bfa;
+      --green: #22c55e;
+      --green-bg: #052e16;
+      --green-text: #86efac;
+      --red: #ef4444;
+      --row-h: 76px;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ─── HEADER ─── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      flex-shrink: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--blue-light);
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+    .logo svg { flex-shrink: 0; }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .search-wrap {
+      position: relative;
+    }
+    .search-wrap svg {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    .search-wrap input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px 8px 34px;
+      color: var(--text);
+      font-size: 13px;
+      width: 260px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .search-wrap input:focus { border-color: var(--blue); }
+    .search-wrap input::placeholder { color: var(--text-muted); }
+
+    .stats-badge {
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      white-space: nowrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: opacity .15s, transform .1s;
+    }
+    .btn:hover:not(:disabled) { opacity: .85; }
+    .btn:active:not(:disabled) { transform: scale(.97); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-danger  { background: #7f1d1d; color: #fca5a5; border: 1px solid #991b1b; }
+
+    /* ─── MAIN ─── */
+    .main {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ─── TABLE SCROLL CONTAINER ─── */
+    .table-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow-x: auto;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 860px;
+      table-layout: fixed;
+    }
+
+    thead {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    th {
+      background: var(--surface);
+      border-bottom: 2px solid var(--border);
+      padding: 11px 16px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--blue-light);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+
+    .col-work { width: 38%; }
+    .col-type { width: 17%; }
+    .col-ref  { width: 31%; }
+    .col-ac   { width: 14%; }
+
+    tbody tr.vrow {
+      height: var(--row-h);
+      border-bottom: 1px solid var(--border);
+      transition: background .1s;
+    }
+    tbody tr.vrow:hover { background: var(--surface2); }
+    tbody tr.vrow:nth-child(even) { background: rgba(17,24,39,.5); }
+    tbody tr.vrow:nth-child(even):hover { background: var(--surface2); }
+
+    td {
+      padding: 8px 16px;
+      font-size: 13px;
+      line-height: 1.55;
+      vertical-align: top;
+    }
+
+    .cell-clamp {
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      cursor: pointer;
+      color: var(--text);
+      transition: color .15s;
+    }
+    .cell-clamp:hover { color: var(--blue-light); }
+
+    .type-tag {
+      display: inline-block;
+      background: #1e3a5f;
+      color: var(--blue-light);
+      padding: 2px 9px;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 500;
+      word-break: break-word;
+    }
+
+    .ref-val {
+      color: var(--purple);
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .ac-badge {
+      display: inline-block;
+      background: var(--green-bg);
+      color: var(--green-text);
+      padding: 3px 9px;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    mark { background: #854d0e; color: #fde68a; border-radius: 2px; padding: 0 2px; }
+
+    /* ─── STATES ─── */
+    .state-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      height: 350px;
+      color: var(--text-muted);
+    }
+    .state-screen h3 { font-size: 17px; color: #475569; }
+    .state-screen p  { font-size: 13px; text-align: center; max-width: 320px; }
+
+    .spinner {
+      width: 28px; height: 28px;
+      border: 3px solid var(--border);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── PROGRESS OVERLAY ─── */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.75);
+      z-index: 500;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .overlay-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 32px 44px;
+      text-align: center;
+      min-width: 320px;
+      max-width: 90vw;
+    }
+    .overlay-box .spinner { margin: 0 auto 18px; }
+    .overlay-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .overlay-sub   { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+    .prog-track {
+      background: var(--border);
+      border-radius: 999px;
+      height: 8px;
+      margin-top: 16px;
+      overflow: hidden;
+    }
+    .prog-fill {
+      background: var(--blue);
+      height: 100%;
+      border-radius: 999px;
+      transition: width .3s;
+    }
+
+    /* ─── MODAL ─── */
+    .modal-bg {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.7);
+      z-index: 300;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-bg.open { display: flex; }
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      max-width: 680px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      position: relative;
+    }
+    .modal-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--blue-light);
+      margin-bottom: 12px;
+    }
+    .modal-text {
+      font-size: 14px;
+      line-height: 1.75;
+      color: #cbd5e1;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .modal-close {
+      position: absolute;
+      top: 16px; right: 16px;
+      background: none; border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 20px;
+      line-height: 1;
+      padding: 4px;
+      border-radius: 4px;
+      transition: color .15s;
+    }
+    .modal-close:hover { color: var(--text); }
+
+    /* ─── TOAST ─── */
+    .toast {
+      position: fixed;
+      bottom: 22px; right: 22px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 18px;
+      font-size: 13px;
+      z-index: 1000;
+      max-width: 340px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.5);
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all .28s cubic-bezier(.34,1.56,.64,1);
+      pointer-events: none;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { border-color: var(--green); color: var(--green-text); }
+    .toast.error   { border-color: var(--red);   color: #fca5a5; }
+    .toast.info    { border-color: var(--blue);   color: var(--blue-light); }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 700px) {
+      header { padding: 10px 12px; }
+      .search-wrap input { width: 190px; }
+      .logo span { display: none; }
+      th, td { padding: 7px 10px; font-size: 12px; }
+      .col-ref { display: none; }
+    }
+    @media (max-width: 480px) {
+      .search-wrap input { width: 150px; }
+      .btn-text { display: none; }
+      .col-type { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 8.414V19a2 2 0 01-2 2z"/>
+    </svg>
+    <span>PageBlock Dashboard</span>
+  </div>
+
+  <div class="controls">
+    <div class="search-wrap">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="M21 21l-4.35-4.35"/>
+      </svg>
+      <input type="text" id="searchInput" placeholder="Tüm sütunlarda ara…" autocomplete="off">
+    </div>
+    <div class="stats-badge" id="statsLabel">—</div>
+    <button class="btn btn-primary" id="importBtn">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+      </svg>
+      <span class="btn-text">Excel İmport</span>
+    </button>
+    <button class="btn btn-danger" id="clearBtn" style="display:none">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+      </svg>
+      <span class="btn-text">Temizle</span>
+    </button>
+    <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none">
+  </div>
+</header>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="table-scroll" id="tableScroll">
+
+    <!-- Loading -->
+    <div class="state-screen" id="stateLoading">
+      <div class="spinner"></div>
+      <p>Veriler Firebase'den yükleniyor…</p>
+    </div>
+
+    <!-- Empty -->
+    <div class="state-screen" id="stateEmpty" style="display:none">
+      <svg width="56" height="56" fill="none" viewBox="0 0 24 24" stroke="#334155" stroke-width="1.3">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 8.414V19a2 2 0 01-2 2z"/>
+      </svg>
+      <h3>Veri bulunamadı</h3>
+      <p>Excel dosyası import edin veya arama kriterinizi değiştirin.</p>
+    </div>
+
+    <!-- Table -->
+    <div id="tableWrap" style="display:none">
+      <table id="mainTable">
+        <thead>
+          <tr>
+            <th class="col-work">WORK ACCOMPLISHED</th>
+            <th class="col-type">A/C TYPE</th>
+            <th class="col-ref">REFERENCE</th>
+            <th class="col-ac">A/C</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- Progress overlay -->
+<div class="overlay" id="overlay" style="display:none">
+  <div class="overlay-box">
+    <div class="spinner"></div>
+    <div class="overlay-title" id="overlayTitle">İşleniyor…</div>
+    <div class="overlay-sub"  id="overlaySub"></div>
+    <div class="prog-track">
+      <div class="prog-fill" id="progFill" style="width:0%"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal (full text) -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal-box">
+    <button class="modal-close" id="modalClose">✕</button>
+    <div class="modal-label" id="modalLabel">WORK ACCOMPLISHED</div>
+    <div class="modal-text"  id="modalText"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- SheetJS -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
+<!-- Firebase + App Logic -->
+<script type="module">
+import { initializeApp }         from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getFirestore, collection, getDocs, writeBatch, doc }
+                                  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+/* ── Firebase init ── */
+const app = initializeApp({
+  apiKey:            "AIzaSyCIthKHSFQjFbhCNpJuXpPiz3lPdOw-9d4",
+  authDomain:        "pageblock-ffa5f.firebaseapp.com",
+  projectId:         "pageblock-ffa5f",
+  storageBucket:     "pageblock-ffa5f.firebasestorage.app",
+  messagingSenderId: "181336631491",
+  appId:             "1:181336631491:web:3e0f21f8ac7c46f6349a76"
+});
+const db   = getFirestore(app);
+const COL  = 'pageblocks';
+
+/* ── State ── */
+let allData      = [];   // full dataset from Firestore
+let filteredData = [];   // after search filter
+let searchTerm   = '';
+
+const ROW_H  = 76;   // px – must match CSS --row-h
+const BUFFER = 12;   // extra rows above/below viewport
+
+/* ── DOM refs ── */
+const tableScroll  = document.getElementById('tableScroll');
+const tableWrap    = document.getElementById('tableWrap');
+const tbody        = document.getElementById('tbody');
+const stateLoading = document.getElementById('stateLoading');
+const stateEmpty   = document.getElementById('stateEmpty');
+const statsLabel   = document.getElementById('statsLabel');
+const searchInput  = document.getElementById('searchInput');
+const importBtn    = document.getElementById('importBtn');
+const clearBtn     = document.getElementById('clearBtn');
+const fileInput    = document.getElementById('fileInput');
+const overlay      = document.getElementById('overlay');
+const overlayTitle = document.getElementById('overlayTitle');
+const overlaySub   = document.getElementById('overlaySub');
+const progFill     = document.getElementById('progFill');
+const modalBg      = document.getElementById('modalBg');
+const modalLabel   = document.getElementById('modalLabel');
+const modalText    = document.getElementById('modalText');
+const modalClose   = document.getElementById('modalClose');
+const toast        = document.getElementById('toast');
+
+/* ── Utility ── */
+let toastTimer;
+function showToast(msg, type = 'info') {
+  clearTimeout(toastTimer);
+  toast.textContent = msg;
+  toast.className   = `toast ${type} show`;
+  toastTimer = setTimeout(() => { toast.className = 'toast'; }, 3600);
+}
+
+function setOverlay(show, title = '', sub = '', pct = 0) {
+  overlay.style.display = show ? 'flex' : 'none';
+  overlayTitle.textContent = title;
+  overlaySub.textContent   = sub;
+  progFill.style.width     = pct + '%';
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escRx(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+function hl(text, term) {
+  const safe = esc(text);
+  if (!term) return safe;
+  return safe.replace(new RegExp(`(${escRx(esc(term))})`, 'gi'), '<mark>$1</mark>');
+}
+
+function extractRef(text) {
+  if (!text) return '';
+  const m = text.match(/(CMM|Page|AMM)[\s\S]*/i);
+  return m ? m[0].replace(/\r/g, '').trim() : '';
+}
+
+function cleanText(text) {
+  return (text ?? '').replace(/\r/g, '').trim();
+}
+
+/* ── Load from Firestore ── */
+async function loadData() {
+  stateLoading.style.display = 'flex';
+  tableWrap.style.display    = 'none';
+  stateEmpty.style.display   = 'none';
+  statsLabel.textContent     = '—';
+  try {
+    const snap = await getDocs(collection(db, COL));
+    allData = snap.docs.map(d => d.data());
+    applyFilter();
+    stateLoading.style.display = 'none';
+    if (allData.length > 0) {
+      clearBtn.style.display = 'inline-flex';
+      showToast(`${allData.length.toLocaleString()} kayıt yüklendi`, 'success');
+    }
+  } catch (e) {
+    stateLoading.style.display = 'none';
+    stateEmpty.style.display   = 'flex';
+    console.error(e);
+    showToast('Bağlantı hatası: ' + e.message, 'error');
+  }
+}
+
+/* ── Search / Filter ── */
+function applyFilter() {
+  searchTerm = searchInput.value.trim().toLowerCase();
+  filteredData = searchTerm
+    ? allData.filter(r =>
+        (r.work      || '').toLowerCase().includes(searchTerm) ||
+        (r.acType    || '').toLowerCase().includes(searchTerm) ||
+        (r.reference || '').toLowerCase().includes(searchTerm) ||
+        (r.ac        || '').toLowerCase().includes(searchTerm)
+      )
+    : allData;
+  updateStats();
+  tableScroll.scrollTop = 0;
+  renderAll();
+}
+
+function updateStats() {
+  if (!allData.length) { statsLabel.textContent = 'Veri yok'; return; }
+  statsLabel.textContent = searchTerm
+    ? `${filteredData.length.toLocaleString()} / ${allData.length.toLocaleString()} kayıt`
+    : `${allData.length.toLocaleString()} kayıt`;
+}
+
+/* ── Virtual Scroll Renderer ── */
+function renderAll() {
+  if (!filteredData.length) {
+    tableWrap.style.display  = 'none';
+    stateEmpty.style.display = 'flex';
+    return;
+  }
+  stateEmpty.style.display = 'none';
+  tableWrap.style.display  = 'block';
+  renderRows();
+}
+
+function getRange() {
+  const top    = tableScroll.scrollTop;
+  const height = tableScroll.clientHeight;
+  // subtract thead height (~42px)
+  const start  = Math.max(0, Math.floor((top - 42) / ROW_H) - BUFFER);
+  const end    = Math.min(filteredData.length, Math.ceil((top - 42 + height) / ROW_H) + BUFFER);
+  return { start, end };
+}
+
+function renderRows() {
+  const total       = filteredData.length;
+  const { start, end } = getRange();
+  const html        = [];
+
+  // Top spacer
+  if (start > 0)
+    html.push(`<tr style="height:${start * ROW_H}px"><td colspan="4" style="padding:0;border:none"></td></tr>`);
+
+  for (let i = start; i < end; i++) {
+    const r = filteredData[i];
+    html.push(`
+      <tr class="vrow">
+        <td><div class="cell-clamp" data-i="${i}">${hl(r.work, searchTerm)}</div></td>
+        <td><span class="type-tag">${hl(r.acType, searchTerm)}</span></td>
+        <td><div class="ref-val">${hl(r.reference, searchTerm)}</div></td>
+        <td><span class="ac-badge">${hl(r.ac, searchTerm)}</span></td>
+      </tr>`);
+  }
+
+  // Bottom spacer
+  if (end < total)
+    html.push(`<tr style="height:${(total - end) * ROW_H}px"><td colspan="4" style="padding:0;border:none"></td></tr>`);
+
+  tbody.innerHTML = html.join('');
+
+  // Cell click → modal
+  tbody.querySelectorAll('.cell-clamp').forEach(el => {
+    el.addEventListener('click', () => {
+      const r = filteredData[+el.dataset.i];
+      modalLabel.textContent = 'WORK ACCOMPLISHED';
+      modalText.textContent  = r.work || '';
+      modalBg.classList.add('open');
+    });
+  });
+}
+
+// Throttle scroll with rAF
+let rafPending = false;
+tableScroll.addEventListener('scroll', () => {
+  if (rafPending) return;
+  rafPending = true;
+  requestAnimationFrame(() => { renderRows(); rafPending = false; });
+});
+
+window.addEventListener('resize', () => { if (filteredData.length) renderRows(); });
+
+/* ── Search event ── */
+let searchTimer;
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(applyFilter, 280);
+});
+
+/* ── Excel Import ── */
+importBtn.addEventListener('click', () => fileInput.click());
+
+fileInput.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  fileInput.value = '';
+
+  try {
+    setOverlay(true, 'Excel okunuyor…', '', 5);
+
+    const buf  = await file.arrayBuffer();
+    const wb   = XLSX.read(buf, { type: 'array' });
+    const ws   = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+    setOverlay(true, 'Veriler işleniyor…', `${rows.length - 1} satır taranıyor`, 20);
+
+    // Build dedup set from existing data
+    const seen = new Set(allData.map(r => r.work));
+    const newRecs = [];
+
+    for (let i = 1; i < rows.length; i++) {
+      const row  = rows[i];
+      if (!row || !row.length) continue;
+      const dRaw = String(row[3] ?? '').trim();   // D column
+      const gRaw = String(row[6] ?? '').trim();   // G column
+      const jRaw = String(row[9] ?? '').trim();   // J column
+      if (!dRaw)        continue;
+      const work = cleanText(dRaw);
+      if (seen.has(work)) continue;
+      seen.add(work);
+      newRecs.push({ work, acType: gRaw, reference: extractRef(dRaw), ac: jRaw });
+    }
+
+    if (!newRecs.length) {
+      setOverlay(false);
+      showToast('Yeni (tekrarsız) kayıt bulunamadı', 'info');
+      return;
+    }
+
+    // Batch write (max 500/batch; using 450 to stay safe)
+    const BATCH = 450;
+    let written = 0;
+    for (let i = 0; i < newRecs.length; i += BATCH) {
+      const batch = writeBatch(db);
+      newRecs.slice(i, i + BATCH).forEach(rec => batch.set(doc(collection(db, COL)), rec));
+      await batch.commit();
+      written += Math.min(BATCH, newRecs.length - i);
+      const pct = 25 + Math.round((written / newRecs.length) * 70);
+      setOverlay(true, 'Firebase\'e yazılıyor…', `${written.toLocaleString()} / ${newRecs.length.toLocaleString()} kayıt`, pct);
+    }
+
+    setOverlay(true, 'Tamamlandı!', '', 100);
+    await new Promise(r => setTimeout(r, 700));
+    setOverlay(false);
+    showToast(`${newRecs.length.toLocaleString()} kayıt başarıyla eklendi`, 'success');
+    await loadData();
+
+  } catch (err) {
+    console.error(err);
+    setOverlay(false);
+    showToast('Import hatası: ' + err.message, 'error');
+  }
+});
+
+/* ── Clear all data ── */
+clearBtn.addEventListener('click', async () => {
+  if (!confirm(`Toplam ${allData.length.toLocaleString()} kaydın tamamı kalıcı olarak silinecek.\n\nDevam etmek istiyor musunuz?`)) return;
+
+  try {
+    setOverlay(true, 'Veriler siliniyor…', '', 0);
+    const snap  = await getDocs(collection(db, COL));
+    const total = snap.docs.length;
+    const BATCH = 450;
+    let deleted = 0;
+
+    for (let i = 0; i < snap.docs.length; i += BATCH) {
+      const batch = writeBatch(db);
+      snap.docs.slice(i, i + BATCH).forEach(d => batch.delete(d.ref));
+      await batch.commit();
+      deleted += Math.min(BATCH, snap.docs.length - i);
+      setOverlay(true, 'Siliniyor…', `${deleted} / ${total} kayıt silindi`, Math.round((deleted / total) * 100));
+    }
+
+    setOverlay(false);
+    allData = []; filteredData = [];
+    clearBtn.style.display = 'none';
+    applyFilter();
+    showToast('Tüm veriler silindi', 'success');
+
+  } catch (err) {
+    console.error(err);
+    setOverlay(false);
+    showToast('Silme hatası: ' + err.message, 'error');
+  }
+});
+
+/* ── Modal ── */
+modalClose.addEventListener('click', () => modalBg.classList.remove('open'));
+modalBg.addEventListener('click', e => { if (e.target === modalBg) modalBg.classList.remove('open'); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') modalBg.classList.remove('open'); });
+
+/* ── Boot ── */
+loadData();
+</script>
+
+</body>
+</html>
